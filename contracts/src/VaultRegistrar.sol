@@ -60,6 +60,10 @@ contract VaultRegistrar is Ownable, EIP712 {
         return registry[vault][identity];
     }
 
+    function DOMAIN_SEPARATOR() external view returns (bytes32) {
+        return _domainSeparatorV4();
+    }
+
     function setIssuer(address issuer, bool authorized) external onlyOwner {
         authorizedIssuers[issuer] = authorized;
         emit IssuerSet(issuer, authorized);
