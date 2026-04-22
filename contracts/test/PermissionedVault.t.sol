@@ -85,4 +85,45 @@ contract PermissionedVaultTest is Test {
         registrar.revoke(address(vaultB), agent);
         assertEq(vaultB.maxDeposit(agent), 0);
     }
+
+    function test_transferToUnregisteredReverts() public {
+        registrar.register(address(vaultA), investor, VaultRegistrar.IdentityType.HUMAN_KYC);
+        vm.prank(investor);
+        vaultA.deposit(5e6, investor);
+        // stranger is unregistered — transfer should revert
+        vm.prank(investor);
+        vm.expectRevert(abi.encodeWithSelector(PermissionedVault.NotPermitted.selector, stranger));
+        vaultA.transfer(stranger, 1e6);
+    }
+
+    function test_transferToRegisteredSucceeds() public {
+        address investor2 = address(0xFEED);
+        registrar.register(address(vaultA), investor, VaultRegistrar.IdentityType.HUMAN_KYC);
+        registrar.register(address(vaultA), investor2, VaultRegistrar.IdentityType.HUMAN_KYC);
+        vm.prank(investor);
+        vaultA.deposit(5e6, investor);
+        uint256 shares = vaultA.balanceOf(investor);
+        vm.prank(investor);
+        vaultA.transfer(investor2, shares);
+        assertEq(vaultA.balanceOf(investor2), shares);
+    }
+
+    function test_withdrawToUnregisteredReverts() public {
+        registrar.register(address(vaultA), investor, VaultRegistrar.IdentityType.HUMAN_KYC);
+        vm.prank(investor);
+        vaultA.deposit(5e6, investor);
+        // withdraw to stranger (unregistered receiver)
+        vm.prank(investor);
+        vm.expectRevert(abi.encodeWithSelector(PermissionedVault.NotPermitted.selector, stranger));
+        vaultA.withdraw(5e6, stranger, investor);
+    }
+
+    function test_redeemToUnregisteredReverts() public {
+        registrar.register(address(vaultA), investor, VaultRegistrar.IdentityType.HUMAN_KYC);
+        vm.prank(investor);
+        uint256 shares = vaultA.deposit(5e6, investor);
+        vm.prank(investor);
+        vm.expectRevert(abi.encodeWithSelector(PermissionedVault.NotPermitted.selector, stranger));
+        vaultA.redeem(shares, stranger, investor);
+    }
 }
