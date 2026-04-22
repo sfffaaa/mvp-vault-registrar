@@ -9,7 +9,10 @@ const CHAIN_ID = 43113
 
 const publicClient = createPublicClient({ transport: http(RPC_URL) })
 async function waitTx(hash: `0x${string}`) {
-  await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 })
+  const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 })
+  if (receipt.status === "reverted") {
+    throw new Error(`tx ${hash} reverted on-chain`)
+  }
 }
 
 function requireHex(name: string): `0x${string}` {

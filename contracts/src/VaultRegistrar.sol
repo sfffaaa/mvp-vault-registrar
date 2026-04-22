@@ -51,9 +51,8 @@ contract VaultRegistrar is Ownable, EIP712 {
             abi.encode(REGISTER_TYPEHASH, vault, identity, nonce, expiry)
         );
         address signer = _hashTypedDataV4(structHash).recover(sig);
-        // Explicit zero-address check: ECDSA.recover returns address(0) on
-        // certain malformed inputs; without this, a mis-configured setIssuer(address(0), true)
-        // would allow anyone to forge registrations.
+        // Explicit zero-address guard: prevents a mis-configured setIssuer(address(0), true)
+        // from acting as a universal forgery key.
         if (signer == address(0) || !authorizedIssuers[signer]) revert InvalidIssuer();
         nonces[vault][identity] = nonce + 1;
         registry[vault][identity] = IdentityType.HUMAN_KYC;
@@ -62,6 +61,10 @@ contract VaultRegistrar is Ownable, EIP712 {
 
     function revoke(address vault, address identity) external onlyOwner {
         registry[vault][identity] = IdentityType.NONE;
+        // Bump nonce to invalidate any outstanding issuer signatures for this
+        // (vault, identity) pair. Without this, a pre-signed sig remains
+        // exploitable until its expiry even after revocation.
+        nonces[vault][identity]++;
         emit Revoked(vault, identity);
     }
 
