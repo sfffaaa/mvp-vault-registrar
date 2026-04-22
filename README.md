@@ -37,7 +37,7 @@ EIP-712 Signature (issuer)      Direct Call (admin/owner)
 |---|---|
 | `MockAsset.sol` | ERC-20 with public `mint()`, 6 decimals — underlying asset |
 | `VaultRegistrar.sol` | Registry: `(vault, identity) → IdentityType`. EIP-712 for HUMAN_KYC, owner-only call for AGENT_KYA |
-| `PermissionedVault.sol` | ERC-4626 vault that checks the Registrar on every deposit |
+| `PermissionedVault.sol` | ERC-4626 vault that checks the Registrar on every deposit, withdrawal, mint, redeem, and token transfer |
 
 ## Policy Rules
 
@@ -46,7 +46,7 @@ EIP-712 Signature (issuer)      Direct Call (admin/owner)
 | HUMAN_KYC registration | EIP-712 signature from authorized issuer |
 | AGENT_KYA registration | Owner direct call |
 | Replay protection | Nonce per `(vault, identity)` pair |
-| Revocation | Owner sets identity back to `NONE` |
+| Revocation | Owner sets identity back to `NONE`; nonce is bumped to invalidate any outstanding signatures |
 
 ## Quick Start
 
