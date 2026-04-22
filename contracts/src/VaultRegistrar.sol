@@ -34,19 +34,28 @@ contract VaultRegistrar is Ownable, EIP712 {
         emit Registered(vault, identity, t);
     }
 
+    // registerWithSig is intentionally restricted to HUMAN_KYC.
+    // AGENT_KYA registration requires owner-signed direct `register()` calls
+    // because agent identity verification does not use delegated issuer signatures.
     function registerWithSig(
         address vault,
         address identity,
         uint256 expiry,
         bytes calldata sig
     ) external {
-        if (block.timestamp > expiry) revert ExpiredSignature();
-        uint256 nonce = nonces[vault][identity]++;
+        if (block.timestamp >= expiry) revert ExpiredSignature();
+        // Read nonce first, verify signature, then increment — prevents DoS where
+        // a bad-sig call burns the nonce invalidating a valid outstanding signature.
+        uint256 nonce = nonces[vault][identity];
         bytes32 structHash = keccak256(
             abi.encode(REGISTER_TYPEHASH, vault, identity, nonce, expiry)
         );
         address signer = _hashTypedDataV4(structHash).recover(sig);
-        if (!authorizedIssuers[signer]) revert InvalidIssuer();
+        // Explicit zero-address check: ECDSA.recover returns address(0) on
+        // certain malformed inputs; without this, a mis-configured setIssuer(address(0), true)
+        // would allow anyone to forge registrations.
+        if (signer == address(0) || !authorizedIssuers[signer]) revert InvalidIssuer();
+        nonces[vault][identity] = nonce + 1;
         registry[vault][identity] = IdentityType.HUMAN_KYC;
         emit Registered(vault, identity, IdentityType.HUMAN_KYC);
     }

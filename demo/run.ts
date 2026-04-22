@@ -14,8 +14,9 @@ async function waitTx(hash: `0x${string}`) {
 
 function requireHex(name: string): `0x${string}` {
   const val = process.env[name]
-  if (!val || !val.startsWith("0x") || val.length <= 2) {
-    console.error(`Missing or invalid env var ${name}`)
+  // 32-byte private key = 64 hex chars + "0x" prefix = 66 chars total
+  if (!val || !val.startsWith("0x") || val.length !== 66) {
+    console.error(`Missing or invalid private key env var ${name} (expected 66-char 0x-prefixed hex)`)
     process.exit(1)
   }
   return val as `0x${string}`

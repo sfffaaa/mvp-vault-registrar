@@ -47,13 +47,9 @@ export class VaultRegistrarClient {
     expiry: bigint,
     issuerPrivateKey: `0x${string}`
   ): Promise<`0x${string}`> {
+    // signTypedData is a local cryptographic operation — no RPC transport needed.
     const account = privateKeyToAccount(issuerPrivateKey)
-    const signer = createWalletClient({
-      account,
-      transport: http("http://localhost:8545"),
-    })
-    return signer.signTypedData({
-      account,
+    return account.signTypedData({
       domain: {
         name: "VaultRegistrar",
         version: "1",

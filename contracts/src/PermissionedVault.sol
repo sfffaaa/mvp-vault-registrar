@@ -42,4 +42,10 @@ contract PermissionedVault is ERC4626 {
             revert NotPermitted(receiver);
         return super.mint(shares, receiver);
     }
+
+    // withdraw() and redeem() are intentionally NOT gated.
+    // This MVP gates entry (deposit/mint) only. Withdrawal receivers are not
+    // restricted because share ownership is already an implicit entry credential.
+    // A production vault enforcing strict receiver gating should also override
+    // withdraw()/redeem() and check receiver identity.
 }
