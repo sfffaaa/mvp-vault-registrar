@@ -1,4 +1,4 @@
-import { parseUnits } from "viem"
+import { parseUnits, createPublicClient, http } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { makeRegistrarClient } from "../src/registrar.js"
 import { makeVaultClient } from "../src/vault.js"
@@ -6,6 +6,11 @@ import { IdentityType } from "../src/types.js"
 
 const RPC_URL = "https://avalanche-fuji-c-chain-rpc.publicnode.com"
 const CHAIN_ID = 43113
+
+const publicClient = createPublicClient({ transport: http(RPC_URL) })
+async function waitTx(hash: `0x${string}`) {
+  await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 })
+}
 
 function requireHex(name: string): `0x${string}` {
   const val = process.env[name]
@@ -27,6 +32,10 @@ function requireAddr(name: string): `0x${string}` {
 
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
+}
+
+function isAccessBlocked(msg: string): boolean {
+  return msg.includes("NotPermitted") || msg.includes("ExceededMaxDeposit")
 }
 
 const DEPLOYER_PK  = requireHex("DEPLOYER_PK")
@@ -71,6 +80,7 @@ async function run() {
       VAULT_A_ADDRESS, investorAddress, expiry, sig
     )
     console.log("  registerWithSig → tx:", regHash)
+    await waitTx(regHash)
     await investorVaultA.approveAsset()
     const { hash: depHash } = await investorVaultA.deposit(FIVE_TOKENS, investorAddress)
     console.log("  VaultA.deposit(5 tokens) → tx:", depHash)
@@ -87,6 +97,7 @@ async function run() {
       VAULT_B_ADDRESS, agentAddress, IdentityType.AGENT_KYA
     )
     console.log("  register(VaultB, agent, AGENT_KYA) → tx:", regHash)
+    await waitTx(regHash)
     await agentVaultB.approveAsset()
     const { hash: depHash } = await agentVaultB.deposit(FIVE_TOKENS, agentAddress)
     console.log("  VaultB.deposit(5 tokens) → tx:", depHash)
@@ -101,11 +112,12 @@ async function run() {
   try {
     const { hash: revokeHash } = await adminRegistrar.revoke(VAULT_B_ADDRESS, agentAddress)
     console.log("  revoke(VaultB, agent) → tx:", revokeHash)
+    await waitTx(revokeHash)
     await agentVaultB.deposit(FIVE_TOKENS, agentAddress)
     console.log("  (unexpected: should have been rejected)")
   } catch (e) {
     const msg = errorMessage(e)
-    if (msg.includes("NotPermitted")) {
+    if (isAccessBlocked(msg)) {
       console.log("  ✗ NotPermitted — agent revoked, deposit blocked")
     } else {
       console.log("  ✗", msg)
@@ -123,7 +135,7 @@ async function run() {
     console.log("  (unexpected: should have been rejected)")
   } catch (e) {
     const msg = errorMessage(e)
-    if (msg.includes("NotPermitted")) {
+    if (isAccessBlocked(msg)) {
       console.log("  ✗ NotPermitted — unregistered address blocked")
     } else {
       console.log("  ✗", msg)

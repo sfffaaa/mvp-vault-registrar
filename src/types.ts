@@ -87,6 +87,20 @@ export const VAULT_ABI = [
     outputs: [{ name: "", type: "uint256" }],
     stateMutability: "view",
   },
+  {
+    name: "NotPermitted",
+    type: "error",
+    inputs: [{ name: "identity", type: "address" }],
+  },
+  {
+    name: "ERC4626ExceededMaxDeposit",
+    type: "error",
+    inputs: [
+      { name: "receiver", type: "address" },
+      { name: "assets", type: "uint256" },
+      { name: "max", type: "uint256" },
+    ],
+  },
 ] as const
 
 export const ASSET_ABI = [

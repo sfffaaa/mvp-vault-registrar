@@ -2,6 +2,7 @@ import {
   createPublicClient,
   createWalletClient,
   http,
+  defineChain,
   type PublicClient,
   type WalletClient,
   type Address,
@@ -137,7 +138,14 @@ export function makeRegistrarClient(
 ): VaultRegistrarClient {
   const account = privateKeyToAccount(ownerPrivateKey)
   const transport = http(rpcUrl)
-  const publicClient = createPublicClient({ transport }) as PublicClient
-  const walletClient = createWalletClient({ account, transport }) as WalletClient
+  const chain = defineChain({
+    id: chainId,
+    name: "Avalanche Fuji",
+    nativeCurrency: { name: "Avalanche", symbol: "AVAX", decimals: 18 },
+    rpcUrls: { default: { http: [rpcUrl] } },
+    fees: { defaultPriorityFee: 1_000_000_000n },
+  })
+  const publicClient = createPublicClient({ chain, transport }) as PublicClient
+  const walletClient = createWalletClient({ account, chain, transport }) as WalletClient
   return new VaultRegistrarClient({ publicClient, walletClient, registrarAddress, chainId })
 }
