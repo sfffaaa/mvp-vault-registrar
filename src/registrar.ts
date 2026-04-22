@@ -2,12 +2,12 @@ import {
   createPublicClient,
   createWalletClient,
   http,
-  defineChain,
   type PublicClient,
   type WalletClient,
   type Address,
   type Hash,
 } from "viem"
+import { makeChain } from "./chain.js"
 import { privateKeyToAccount } from "viem/accounts"
 import { REGISTRAR_ABI, type IdentityTypeValue } from "./types.js"
 
@@ -134,13 +134,7 @@ export function makeRegistrarClient(
 ): VaultRegistrarClient {
   const account = privateKeyToAccount(ownerPrivateKey)
   const transport = http(rpcUrl)
-  const chain = defineChain({
-    id: chainId,
-    name: "Avalanche Fuji",
-    nativeCurrency: { name: "Avalanche", symbol: "AVAX", decimals: 18 },
-    rpcUrls: { default: { http: [rpcUrl] } },
-    fees: { defaultPriorityFee: 1_000_000_000n },
-  })
+  const chain = makeChain(rpcUrl, chainId)
   const publicClient = createPublicClient({ chain, transport }) as PublicClient
   const walletClient = createWalletClient({ account, chain, transport }) as WalletClient
   return new VaultRegistrarClient({ publicClient, walletClient, registrarAddress, chainId })

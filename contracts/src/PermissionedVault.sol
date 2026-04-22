@@ -10,6 +10,12 @@ contract PermissionedVault is ERC4626 {
 
     error NotPermitted(address identity);
 
+    modifier requirePermitted(address who) {
+        if (registrar.identityType(address(this), who) != requiredType)
+            revert NotPermitted(who);
+        _;
+    }
+
     constructor(
         address asset_,
         address registrar_,
@@ -31,39 +37,30 @@ contract PermissionedVault is ERC4626 {
         return super.maxMint(receiver);
     }
 
-    function deposit(uint256 assets, address receiver) public override returns (uint256) {
-        if (registrar.identityType(address(this), receiver) != requiredType)
-            revert NotPermitted(receiver);
+    // Write functions use requirePermitted modifier for a single identityType check.
+    // deposit/mint call super which internally calls maxDeposit/maxMint — those also
+    // check identityType. We accept the double-check to keep OZ's invariant intact.
+    function deposit(uint256 assets, address receiver) public override requirePermitted(receiver) returns (uint256) {
         return super.deposit(assets, receiver);
     }
 
-    function mint(uint256 shares, address receiver) public override returns (uint256) {
-        if (registrar.identityType(address(this), receiver) != requiredType)
-            revert NotPermitted(receiver);
+    function mint(uint256 shares, address receiver) public override requirePermitted(receiver) returns (uint256) {
         return super.mint(shares, receiver);
     }
 
-    function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256) {
-        if (registrar.identityType(address(this), receiver) != requiredType)
-            revert NotPermitted(receiver);
+    function withdraw(uint256 assets, address receiver, address owner) public override requirePermitted(receiver) returns (uint256) {
         return super.withdraw(assets, receiver, owner);
     }
 
-    function redeem(uint256 shares, address receiver, address owner) public override returns (uint256) {
-        if (registrar.identityType(address(this), receiver) != requiredType)
-            revert NotPermitted(receiver);
+    function redeem(uint256 shares, address receiver, address owner) public override requirePermitted(receiver) returns (uint256) {
         return super.redeem(shares, receiver, owner);
     }
 
-    function transfer(address to, uint256 amount) public override(ERC20, IERC20) returns (bool) {
-        if (registrar.identityType(address(this), to) != requiredType)
-            revert NotPermitted(to);
+    function transfer(address to, uint256 amount) public override(ERC20, IERC20) requirePermitted(to) returns (bool) {
         return super.transfer(to, amount);
     }
 
-    function transferFrom(address from, address to, uint256 amount) public override(ERC20, IERC20) returns (bool) {
-        if (registrar.identityType(address(this), to) != requiredType)
-            revert NotPermitted(to);
+    function transferFrom(address from, address to, uint256 amount) public override(ERC20, IERC20) requirePermitted(to) returns (bool) {
         return super.transferFrom(from, to, amount);
     }
 }

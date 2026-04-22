@@ -3,11 +3,12 @@ import { privateKeyToAccount } from "viem/accounts"
 import { makeRegistrarClient } from "../src/registrar.js"
 import { makeVaultClient } from "../src/vault.js"
 import { IdentityType } from "../src/types.js"
+import { fujiChain } from "../src/chain.js"
 
 const RPC_URL = "https://avalanche-fuji-c-chain-rpc.publicnode.com"
 const CHAIN_ID = 43113
 
-const publicClient = createPublicClient({ transport: http(RPC_URL) })
+const publicClient = createPublicClient({ chain: fujiChain, transport: http(RPC_URL) })
 async function waitTx(hash: `0x${string}`) {
   const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 })
   if (receipt.status === "reverted") {
@@ -15,7 +16,7 @@ async function waitTx(hash: `0x${string}`) {
   }
 }
 
-function requireHex(name: string): `0x${string}` {
+function requirePrivateKey(name: string): `0x${string}` {
   const val = process.env[name]
   // 32-byte private key = 64 hex chars + "0x" prefix = 66 chars total
   if (!val || !val.startsWith("0x") || val.length !== 66) {
@@ -42,11 +43,11 @@ function isAccessBlocked(msg: string): boolean {
   return msg.includes("NotPermitted") || msg.includes("ExceededMaxDeposit")
 }
 
-const DEPLOYER_PK  = requireHex("DEPLOYER_PK")
-const ISSUER_PK    = requireHex("ISSUER_PK")
-const INVESTOR_PK  = requireHex("INVESTOR_PK")
-const AGENT_PK     = requireHex("AGENT_PK")
-const STRANGER_PK  = requireHex("STRANGER_PK")
+const DEPLOYER_PK  = requirePrivateKey("DEPLOYER_PK")
+const ISSUER_PK    = requirePrivateKey("ISSUER_PK")
+const INVESTOR_PK  = requirePrivateKey("INVESTOR_PK")
+const AGENT_PK     = requirePrivateKey("AGENT_PK")
+const STRANGER_PK  = requirePrivateKey("STRANGER_PK")
 
 const REGISTRAR_ADDRESS = requireAddr("REGISTRAR_ADDRESS")
 const VAULT_A_ADDRESS   = requireAddr("VAULT_A_ADDRESS")
@@ -85,8 +86,9 @@ async function run() {
     )
     console.log("  registerWithSig → tx:", regHash)
     await waitTx(regHash)
-    await investorVaultA.approveAsset()
+    await waitTx((await investorVaultA.approveAsset()).hash)
     const { hash: depHash } = await investorVaultA.deposit(FIVE_TOKENS, investorAddress)
+    await waitTx(depHash)
     console.log("  VaultA.deposit(5 tokens) → tx:", depHash)
     console.log("  ✓ Human investor deposited into VaultA")
   } catch (e) {
@@ -102,8 +104,9 @@ async function run() {
     )
     console.log("  register(VaultB, agent, AGENT_KYA) → tx:", regHash)
     await waitTx(regHash)
-    await agentVaultB.approveAsset()
+    await waitTx((await agentVaultB.approveAsset()).hash)
     const { hash: depHash } = await agentVaultB.deposit(FIVE_TOKENS, agentAddress)
+    await waitTx(depHash)
     console.log("  VaultB.deposit(5 tokens) → tx:", depHash)
     console.log("  ✓ AI agent deposited into VaultB")
   } catch (e) {

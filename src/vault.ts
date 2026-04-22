@@ -6,9 +6,9 @@ import {
   maxUint256,
   createPublicClient,
   createWalletClient,
-  defineChain,
   http,
 } from "viem"
+import { makeChain } from "./chain.js"
 import { privateKeyToAccount } from "viem/accounts"
 import { VAULT_ABI, ASSET_ABI } from "./types.js"
 
@@ -84,13 +84,7 @@ export function makeVaultClient(
 ): PermissionedVaultClient {
   const account = privateKeyToAccount(depositorPrivateKey)
   const transport = http(rpcUrl)
-  const chain = defineChain({
-    id: chainId,
-    name: "Avalanche Fuji",
-    nativeCurrency: { name: "Avalanche", symbol: "AVAX", decimals: 18 },
-    rpcUrls: { default: { http: [rpcUrl] } },
-    fees: { defaultPriorityFee: 1_000_000_000n },
-  })
+  const chain = makeChain(rpcUrl, chainId)
   const publicClient = createPublicClient({ chain, transport }) as PublicClient
   const walletClient = createWalletClient({ account, chain, transport }) as WalletClient
   return new PermissionedVaultClient({ publicClient, walletClient, vaultAddress, assetAddress })
